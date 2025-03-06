@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1000" height="800" viewBox="0 0 1000 800" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background shape -->
+    <path d="M50 0h900c27.614 0 50 22.386 50 50v700c0 27.614-22.386 50-50 50H50c-27.614 0-50-22.386-50-50V50C0 22.386 22.386 0 50 0z" fill="#F8F7FF"/>
+    
+    <!-- Office setting with desks -->
+    <rect x="200" y="300" width="600" height="300" fill="#E6E4FF" rx="20"/>
+    <rect x="250" y="350" width="200" height="100" fill="#D1CFFF" rx="10"/>
+    <rect x="550" y="350" width="200" height="100" fill="#D1CFFF" rx="10"/>
+    
+    <!-- Divider -->
+    <rect x="480" y="320" width="40" height="260" fill="#C4C1FF" rx="5"/>
+    
+    <!-- Decorative elements -->
+    <path d="M150 200c0 0 100-50 200-50s200 50 200 50" stroke="#8B7FFF" stroke-width="2"/>
+    <circle cx="700" cy="150" r="30" fill="#8B7FFF" opacity="0.3"/>
+    <circle cx="300" cy="180" r="20" fill="#8B7FFF" opacity="0.3"/>
+    
+    <!-- Hearts -->
+    <path d="M600 200l20 20l20-20l-20-20z" fill="#8B7FFF" opacity="0.5"/>
+    <path d="M350 150l15 15l15-15l-15-15z" fill="#8B7FFF" opacity="0.5"/>
+    <path d="M500 180l25 25l25-25l-25-25z" fill="#8B7FFF" opacity="0.5"/>
+    
+    <!-- Plants -->
+    <path d="M200 500c0 0 20-40 0-60s-40 0-40 20s20 40 40 40z" fill="#8B7FFF" opacity="0.3"/>
+    <path d="M800 500c0 0-20-40 0-60s40 0 40 20s-20 40-40 40z" fill="#8B7FFF" opacity="0.3"/>
+</svg>
