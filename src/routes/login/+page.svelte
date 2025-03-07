@@ -3,16 +3,54 @@
     import { goto } from '$app/navigation';
     import Logo from '$lib/components/Logo.svelte';
     
-    let email = '';
+    let identity = '';
     let password = '';
     let error = '';
+    let isLoading = false;
+
+    function validatePhoneNumber(phone: string) {
+        return /^[0-9]{10}$/.test(phone);
+    }
 
     async function login() {
         try {
-            await pb.collection('users').authWithPassword(email, password);
-            goto('/find');
+            isLoading = true;
+            error = '';
+            
+            // Don't allow email login
+            if (identity.includes('@')) {
+                error = 'Please use your nickname or phone number to login';
+                return;
+            }
+            
+            // If input looks like a phone number, validate it
+            if (/^[0-9]+$/.test(identity)) {
+                if (!validatePhoneNumber(identity)) {
+                    error = 'Please enter a valid 10-digit phone number';
+                    return;
+                }
+            }
+            
+            // Try to find a user with this nickname or phone number
+            const result = await pb.collection('users').getList(1, 1, {
+                filter: `nickname = "${identity}" || phoneNumber = "${identity}"`
+            });
+            
+            // If we found a user, use their email to login
+            if (result.items.length > 0) {
+                await pb.collection('users').authWithPassword(result.items[0].email, password);
+                goto('/find');
+            } else {
+                if (/^[0-9]+$/.test(identity)) {
+                    error = 'Phone number not found. Please check and try again.';
+                } else {
+                    error = 'Nickname not found. Please check and try again.';
+                }
+            }
         } catch (err) {
-            error = err.message;
+            error = 'Invalid credentials. Please check your login details and try again.';
+        } finally {
+            isLoading = false;
         }
     }
 </script>
@@ -36,14 +74,15 @@
         
         <form on:submit|preventDefault={login}>
             <div class="form-group">
-                <label for="email">Email</label>
+                <label for="identity">Nickname or Phone Number</label>
                 <input 
-                    type="email" 
-                    id="email" 
-                    bind:value={email} 
+                    type="text" 
+                    id="identity" 
+                    bind:value={identity} 
                     required 
-                    placeholder="Enter your email"
+                    placeholder="Enter your nickname or phone number"
                 />
+                <p class="input-note">You can sign in using your nickname or 10-digit phone number</p>
             </div>
             
             <div class="form-group">
@@ -57,7 +96,9 @@
                 />
             </div>
             
-            <button type="submit" class="submit-button">Sign In</button>
+            <button type="submit" class="submit-button" disabled={isLoading}>
+                {isLoading ? 'Signing in...' : 'Sign In'}
+            </button>
 
             <div class="signup-link">
                 Don't have an account? <a href="/signup">Create one</a>
@@ -185,6 +226,19 @@
 
     .signup-link a:hover {
         text-decoration: underline;
+    }
+
+    .input-note {
+        font-size: 0.85rem;
+        color: #666;
+        margin-top: 0.5rem;
+        line-height: 1.4;
+    }
+
+    .submit-button:disabled {
+        background: #cccccc;
+        cursor: not-allowed;
+        transform: none;
     }
 
     @keyframes fadeInUp {

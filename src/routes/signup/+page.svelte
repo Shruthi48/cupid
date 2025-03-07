@@ -8,8 +8,10 @@
     let password = '';
     let passwordConfirm = '';
     let nickname = '';
+    let phoneNumber = '';
     let error = '';
     let isCheckingNickname = false;
+    let isCheckingPhone = false;
     let isVerificationSent = false;
     let isResendingEmail = false;
     let isCheckingVerification = false;
@@ -27,9 +29,41 @@
     // Password confirmation validation
     $: passwordsMatch = password && passwordConfirm && password === passwordConfirm;
 
+    // Phone number validation
+    function validatePhoneNumber(phone: string) {
+        return /^[0-9]{10}$/.test(phone);
+    }
+
+    async function checkPhoneAvailability() {
+        if (!validatePhoneNumber(phoneNumber)) return;
+        
+        try {
+            isCheckingPhone = true;
+            error = '';
+            
+            // Check if phone number exists
+            const result = await pb.collection('users').getList(1, 1, {
+                filter: `phoneNumber = "${phoneNumber}"`
+            });
+            
+            if (result.items.length > 0) {
+                error = 'This phone number is already registered';
+                return false;
+            }
+            return true;
+        } catch (err) {
+            console.error('Error checking phone number:', err);
+            error = 'Error checking phone number availability';
+            return false;
+        } finally {
+            isCheckingPhone = false;
+        }
+    }
+
     // Check if form is valid
     $: isFormValid = email && 
         nickname &&
+        validatePhoneNumber(phoneNumber) &&
         Object.values(passwordValidation).every(Boolean) && 
         passwordsMatch;
 
@@ -118,11 +152,21 @@
     }
 
     async function signup() {
-        // First check nickname availability
+        // Validate phone number format
+        if (!validatePhoneNumber(phoneNumber)) {
+            error = 'Please enter a valid 10-digit phone number';
+            return;
+        }
+
+        // Check phone number availability
+        const isPhoneAvailable = await checkPhoneAvailability();
+        if (!isPhoneAvailable) return;
+
+        // Check nickname availability
         const isNicknameAvailable = await checkNicknameAvailability();
         if (!isNicknameAvailable) return;
 
-        // Then validate password requirements
+        // Validate password requirements
         const passwordError = validatePassword(password);
         if (passwordError) {
             error = passwordError;
@@ -139,7 +183,8 @@
                 email,
                 password,
                 passwordConfirm,
-                nickname
+                nickname,
+                phoneNumber
             };
             
             // Create the user account
@@ -264,6 +309,21 @@
             <div class="form-container">
                 <form on:submit|preventDefault={signup}>
                     <div class="form-group">
+                        <label for="email">Email</label>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            bind:value={email} 
+                            required 
+                            placeholder="Enter your professional email"
+                        />
+                        <p class="email-note">
+                            Please use your professional email for verification. This helps us validate your identity.
+                            <span class="privacy-note">For privacy, your email will never be displayed or shared with other users.</span>
+                        </p>
+                    </div>
+
+                    <div class="form-group">
                         <label for="nickname">Nickname</label>
                         <input 
                             type="text" 
@@ -283,17 +343,28 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="email">Email</label>
+                        <label for="phoneNumber">Phone Number</label>
                         <input 
-                            type="email" 
-                            id="email" 
-                            bind:value={email} 
+                            type="tel" 
+                            id="phoneNumber" 
+                            bind:value={phoneNumber} 
                             required 
-                            placeholder="Enter your professional email"
+                            pattern="[0-9]{10}"
+                            minlength="10"
+                            maxlength="10"
+                            placeholder="Enter your 10-digit phone number"
+                            class={error && error.includes('phone') ? 'error' : ''}
+                            on:blur={checkPhoneAvailability}
                         />
-                        <p class="email-note">
-                            Please use your professional email for verification. This helps us validate your identity.
-                            <span class="privacy-note">For privacy, your email will never be displayed or shared with other users.</span>
+                        {#if isCheckingPhone}
+                            <div class="checking-phone">
+                                <div class="mini-spinner"></div>
+                                <span>Checking phone number availability...</span>
+                            </div>
+                        {/if}
+                        <p class="phone-note">
+                            Please provide a valid 10-digit phone number.
+                            <span class="privacy-note">Your phone number will be kept private and used only for account security.</span>
                         </p>
                     </div>
 
@@ -598,7 +669,7 @@
         border: 1px solid rgba(100, 38, 124, 0.1);
     }
 
-    .email-note {
+    .email-note, .phone-note {
         font-size: 0.85rem;
         color: #666;
         margin-top: 0.5rem;
@@ -665,6 +736,7 @@
         margin: 1rem 0;
     }
 
+    .checking-phone,
     .checking-nickname {
         display: flex;
         align-items: center;

@@ -18,7 +18,6 @@
     const totalSteps = 16;
 
     let gender = '';
-    let phoneNumber = '';
     let dob = '';
     let country = '';
     let city = '';
@@ -50,12 +49,6 @@
             subtitle: 'Help others understand how to refer to you',
             component: 'select',
             options: ['Male', 'Female']
-        },
-        {
-            id: 'phoneNumber',
-            title: 'What is your phone number?',
-            subtitle: 'We\'ll use this to verify your account',
-            component: 'phone'
         },
         {
             id: 'dob',
@@ -261,7 +254,7 @@
 
     $: currentQuestion = questions[currentStep];
     $: progress = ((currentStep + 1) / totalSteps) * 100;
-    $: if( gender || phoneNumber || dob || country || city || designation || description || selectedHobbies.length || favoriteBooks || travelDreams || selectedLifeGoals.length || selectedIdealDates.length || selectedDealBreakers.length || selectedPersonalValues.length || selectedWeekendActivities.length) {
+    $: if( gender  || dob || country || city || designation || description || selectedHobbies.length || favoriteBooks || travelDreams || selectedLifeGoals.length || selectedIdealDates.length || selectedDealBreakers.length || selectedPersonalValues.length || selectedWeekendActivities.length) {
         
         canProceed = validateCurrentStep();
         
@@ -269,14 +262,11 @@
 
     function validateCurrentStep() {
         if (!currentQuestion) return false;
-        console.log('phoneNumhgbhn', phoneNumber);
+        
         
        
 
         switch (currentQuestion.id) {
-            case 'phoneNumber':
-                console.log('phoneNumber.length', typeof (phoneNumber));
-                return phoneNumber.toString().length >= 10;
             case 'gender':
                 return gender !== '';
             case 'dob':
@@ -331,7 +321,6 @@
             loading = true;
             const data = {
                 gender,
-                phoneNumber,
                 dob,
                 country,
                 city,
@@ -388,20 +377,7 @@
                             {/each}
                         </select>
                     </div>
-                {:else if currentQuestion.component === 'phone'}
-                    <div class="form-group">
-                        <div class="phone-input">
-                            <span class="country-code">+91</span>
-                            <input
-                                type="tel"
-                                bind:value={phoneNumber}
-                                placeholder="Enter your phone number"
-                                pattern="[0-9]{10}"
-                                maxlength="10"
-                                required
-                            />
-                        </div>
-                    </div>
+                
                 {:else if currentQuestion.component === 'date'}
                     <div class="form-group">
                         <input
