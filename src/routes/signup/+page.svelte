@@ -7,7 +7,9 @@
     let email = '';
     let password = '';
     let passwordConfirm = '';
+    let nickname = '';
     let error = '';
+    let isCheckingNickname = false;
     let isVerificationSent = false;
     let isResendingEmail = false;
     let isCheckingVerification = false;
@@ -27,6 +29,7 @@
 
     // Check if form is valid
     $: isFormValid = email && 
+        nickname &&
         Object.values(passwordValidation).every(Boolean) && 
         passwordsMatch;
 
@@ -88,8 +91,38 @@
         }
     }
 
+    async function checkNicknameAvailability() {
+        if (!nickname) return;
+        
+        try {
+            isCheckingNickname = true;
+            error = '';
+            
+            // Check if nickname exists
+            const result = await pb.collection('users').getList(1, 1, {
+                filter: `nickname = "${nickname}"`
+            });
+            
+            if (result.items.length > 0) {
+                error = 'This nickname is already taken';
+                return false;
+            }
+            return true;
+        } catch (err) {
+            console.error('Error checking nickname:', err);
+            error = 'Error checking nickname availability';
+            return false;
+        } finally {
+            isCheckingNickname = false;
+        }
+    }
+
     async function signup() {
-        // First validate password requirements
+        // First check nickname availability
+        const isNicknameAvailable = await checkNicknameAvailability();
+        if (!isNicknameAvailable) return;
+
+        // Then validate password requirements
         const passwordError = validatePassword(password);
         if (passwordError) {
             error = passwordError;
@@ -105,7 +138,8 @@
             const data = {
                 email,
                 password,
-                passwordConfirm
+                passwordConfirm,
+                nickname
             };
             
             // Create the user account
@@ -124,7 +158,14 @@
             // Then start periodic checks
             verificationCheckInterval = setInterval(checkVerificationStatus, 30000);
         } catch (err) {
-            error = err.message;
+            // Check if error is about email uniqueness
+            if (err?.response?.data?.email?.code === 'validation_not_unique') {
+                error = 'This email is already registered. Please use a different email or try logging in.';
+                return;
+            } else {
+                error = err.message;
+            }
+            
         }
     }
 
@@ -222,6 +263,25 @@
 
             <div class="form-container">
                 <form on:submit|preventDefault={signup}>
+                    <div class="form-group">
+                        <label for="nickname">Nickname</label>
+                        <input 
+                            type="text" 
+                            id="nickname" 
+                            bind:value={nickname} 
+                            on:blur={checkNicknameAvailability}
+                            required 
+                            placeholder="Choose a unique nickname"
+                            class={error && error.includes('nickname') ? 'error' : ''}
+                        />
+                        {#if isCheckingNickname}
+                            <div class="checking-nickname">
+                                <div class="mini-spinner"></div>
+                                <span>Checking nickname availability...</span>
+                            </div>
+                        {/if}
+                    </div>
+
                     <div class="form-group">
                         <label for="email">Email</label>
                         <input 
@@ -584,6 +644,15 @@
 
     .verification-status {
         margin: 1rem 0;
+    }
+
+    .checking-nickname {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+        font-size: 0.85rem;
+        color: #64267C;
     }
 
     .checking, .checking-complete {

@@ -17,7 +17,6 @@
     let currentStep = 0;
     const totalSteps = 16;
 
-    let nickname = '';
     let gender = '';
     let phoneNumber = '';
     let dob = '';
@@ -46,18 +45,11 @@
 
     const questions = [
         {
-            id: 'nickname',
-            title: 'What should we call you?',
-            subtitle: 'Choose a name that makes you feel comfortable',
-            component: 'input',
-            placeholder: 'Your nickname...'
-        },
-        {
             id: 'gender',
             title: 'What is your gender?',
             subtitle: 'Help others understand how to refer to you',
             component: 'select',
-            options: ['Male', 'Female', 'Non-binary', 'Other', 'Prefer not to say']
+            options: ['Male', 'Female']
         },
         {
             id: 'phoneNumber',
@@ -269,7 +261,7 @@
 
     $: currentQuestion = questions[currentStep];
     $: progress = ((currentStep + 1) / totalSteps) * 100;
-    $: if(nickname || gender || phoneNumber || dob || country || city || designation || description || selectedHobbies.length || favoriteBooks || travelDreams || selectedLifeGoals.length || selectedIdealDates.length || selectedDealBreakers.length || selectedPersonalValues.length || selectedWeekendActivities.length) {
+    $: if( gender || phoneNumber || dob || country || city || designation || description || selectedHobbies.length || favoriteBooks || travelDreams || selectedLifeGoals.length || selectedIdealDates.length || selectedDealBreakers.length || selectedPersonalValues.length || selectedWeekendActivities.length) {
         
         canProceed = validateCurrentStep();
         
@@ -285,8 +277,6 @@
             case 'phoneNumber':
                 console.log('phoneNumber.length', typeof (phoneNumber));
                 return phoneNumber.toString().length >= 10;
-            case 'nickname':
-                return nickname !== '';
             case 'gender':
                 return gender !== '';
             case 'dob':
@@ -340,7 +330,6 @@
         try {
             loading = true;
             const data = {
-                nickname,
                 gender,
                 phoneNumber,
                 dob,
@@ -390,17 +379,7 @@
 
             <div class="question-content">
             </div>
-               {#if currentQuestion.component === 'nickname'}
-                    <div class="form-group">
-                      <input 
-                        type="text" 
-                        id="nickName" 
-                        bind:value={nickname} 
-                        required 
-                        placeholder="Enter your nickname"
-                       />
-                    </div>
-                    {:else if currentQuestion.component === 'select'}
+                {#if currentQuestion.component === 'select'}
                     <div class="form-group">
                         <select bind:value={gender} required>
                             <option value="">Select gender</option>
@@ -458,15 +437,6 @@
                                 <option value={designationOption}>{designationOption}</option>
                             {/each}
                         </select>
-                    </div>
-                {:else if currentQuestion.component === 'input'}
-                    <div class="form-group">
-                        <input
-                            type="text"
-                            bind:value={nickname}
-                            placeholder={currentQuestion.placeholder}
-                            required
-                        />
                     </div>
                 {:else if currentQuestion.component === 'textarea'}
                     <div class="form-group">
