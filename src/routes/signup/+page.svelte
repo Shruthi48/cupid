@@ -10,7 +10,43 @@
     let isVerificationSent = false;
     let isResendingEmail = false;
 
+    // Password validation states
+    $: passwordValidation = {
+        minLength: password.length >= 8,
+        hasUpperCase: /[A-Z]/.test(password),
+        hasNumber: /[0-9]/.test(password),
+        hasSpecial: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+    };
+
+    // Password confirmation validation
+    $: passwordsMatch = password && passwordConfirm && password === passwordConfirm;
+
+    // Check if form is valid
+    $: isFormValid = email && 
+        Object.values(passwordValidation).every(Boolean) && 
+        passwordsMatch;
+
+    function validatePassword(pass: string) {
+        const minLength = pass.length >= 8;
+        const hasUpperCase = /[A-Z]/.test(pass);
+        const hasNumber = /[0-9]/.test(pass);
+        const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(pass);
+
+        if (!minLength) return 'Password must be at least 8 characters long';
+        if (!hasUpperCase) return 'Password must include at least one uppercase letter';
+        if (!hasNumber) return 'Password must include at least one number';
+        if (!hasSpecial) return 'Password must include at least one special character';
+        return null;
+    }
+
     async function signup() {
+        // First validate password requirements
+        const passwordError = validatePassword(password);
+        if (passwordError) {
+            error = passwordError;
+            return;
+        }
+
         if (password !== passwordConfirm) {
             error = 'Passwords do not match';
             return;
@@ -113,6 +149,23 @@
                             required 
                             placeholder="Create a password"
                         />
+                        <div class="password-rules">
+                            <p>Password requirements:</p>
+                            <ul>
+                                <li class={passwordValidation.minLength ? 'valid' : ''}>
+                                    {passwordValidation.minLength ? '✓' : '○'} At least 8 characters long
+                                </li>
+                                <li class={passwordValidation.hasUpperCase ? 'valid' : ''}>
+                                    {passwordValidation.hasUpperCase ? '✓' : '○'} One uppercase letter
+                                </li>
+                                <li class={passwordValidation.hasNumber ? 'valid' : ''}>
+                                    {passwordValidation.hasNumber ? '✓' : '○'} One number
+                                </li>
+                                <li class={passwordValidation.hasSpecial ? 'valid' : ''}>
+                                    {passwordValidation.hasSpecial ? '✓' : '○'} One special character
+                                </li>
+                            </ul>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -124,9 +177,20 @@
                             required 
                             placeholder="Confirm your password"
                         />
+                        {#if passwordConfirm}
+                            <div class="password-confirmation {passwordsMatch ? 'valid' : 'invalid'}">
+                                {passwordsMatch ? '✓ Passwords match' : '✗ Passwords do not match'}
+                            </div>
+                        {/if}
                     </div>
 
-                    <button type="submit" class="submit-button">Create Account</button>
+                    <button 
+                        type="submit" 
+                        class="submit-button" 
+                        disabled={!isFormValid}
+                    >
+                        Create Account
+                    </button>
 
                     <div class="login-link">
                         Already have an account? <a href="/login">Sign in</a>
@@ -257,13 +321,45 @@
         margin-top: 1rem;
     }
     
-    .submit-button:hover {
+    .submit-button:hover:not(:disabled) {
         background: #7c2f99;
         transform: translateY(-1px);
     }
 
+    .submit-button:disabled {
+        background: #cccccc;
+        cursor: not-allowed;
+        transform: none;
+    }
+
     .submit-button:active {
         transform: translateY(0);
+    }
+
+    .password-rules {
+        background: rgba(100, 38, 124, 0.05);
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
+        margin: 0.5rem 0 1rem;
+        font-size: 0.9rem;
+    }
+
+    .password-rules p {
+        color: #64267C;
+        margin: 0 0 0.5rem 0;
+        font-weight: 500;
+    }
+
+    .password-rules ul {
+        margin: 0;
+        padding-left: 1.2rem;
+        list-style-type: disc;
+    }
+
+    .password-rules li {
+        color: #666;
+        margin: 0.25rem 0;
+        line-height: 1.4;
     }
 
     .login-link {
@@ -334,6 +430,63 @@
             opacity: 1;
             transform: translateY(0);
         }
+    }
+
+    .password-rules {
+        background: rgba(100, 38, 124, 0.05);
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin: 0.75rem 0;
+        font-size: 0.85rem;
+        border: 1px solid rgba(100, 38, 124, 0.1);
+    }
+
+    .password-rules p {
+        color: #64267C;
+        margin: 0 0 0.5rem 0;
+        font-weight: 500;
+    }
+
+    .password-rules ul {
+        margin: 0;
+        padding-left: 1.2rem;
+        list-style-type: none;
+    }
+
+    .password-rules li {
+        color: #666;
+        margin: 0.4rem 0;
+        line-height: 1.4;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .password-rules li.valid {
+        color: #28a745;
+        font-weight: 500;
+    }
+
+    .password-confirmation {
+        font-size: 0.85rem;
+        margin-top: 0.5rem;
+        padding: 0.5rem;
+        border-radius: 0.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s;
+    }
+
+    .password-confirmation.valid {
+        color: #28a745;
+        background: rgba(40, 167, 69, 0.1);
+    }
+
+    .password-confirmation.invalid {
+        color: #dc3545;
+        background: rgba(220, 53, 69, 0.1);
     }
 
     @media (max-width: 640px) {
