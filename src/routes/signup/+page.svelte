@@ -289,8 +289,12 @@
                             id="email" 
                             bind:value={email} 
                             required 
-                            placeholder="Enter your email"
+                            placeholder="Enter your professional email"
                         />
+                        <p class="email-note">
+                            Please use your professional email for verification. This helps us validate your identity.
+                            <span class="privacy-note">For privacy, your email will never be displayed or shared with other users.</span>
+                        </p>
                     </div>
 
                     <div class="form-group">
@@ -592,6 +596,21 @@
         margin: 0.75rem 0;
         font-size: 0.85rem;
         border: 1px solid rgba(100, 38, 124, 0.1);
+    }
+
+    .email-note {
+        font-size: 0.85rem;
+        color: #666;
+        margin-top: 0.5rem;
+        line-height: 1.4;
+        max-width: 300px;
+    }
+
+    .privacy-note {
+        display: block;
+        color: #64267C;
+        margin-top: 0.25rem;
+        font-style: italic;
     }
 
     .password-rules p {
