@@ -2,6 +2,7 @@
     import { pb } from '$lib/pocketbase';
     import { goto } from '$app/navigation';
     import Logo from '$lib/components/Logo.svelte';
+    import { onDestroy } from 'svelte';
     
     let email = '';
     let password = '';
@@ -9,6 +10,9 @@
     let error = '';
     let isVerificationSent = false;
     let isResendingEmail = false;
+    let isCheckingVerification = false;
+    let verificationAttempts = 0;
+    let userId = '';
 
     // Password validation states
     $: passwordValidation = {
@@ -39,6 +43,51 @@
         return null;
     }
 
+    let verificationCheckInterval: number;
+
+    async function checkVerificationStatus() {
+        if (!userId) {
+            console.error('No user ID available for verification check');
+            return;
+        }
+
+        try {
+            verificationAttempts++;
+            isCheckingVerification = true;
+            
+            // Get the latest user data directly using the ID
+            const user = await pb.collection('users').getOne(userId);
+            
+            // Check if the user is verified
+            if (user.verified) {
+                clearInterval(verificationCheckInterval);
+                goto('/login');
+                return;
+            }
+
+            // Stop checking after 3 attempts
+            if (verificationAttempts >= 3) {
+                clearInterval(verificationCheckInterval);
+            }
+        } catch (err) {
+            // Handle specific error cases
+            if (err.status === 404) {
+                console.warn('User record not found during verification check');
+            } else if (err.status === 0 || err.status === 502 || err.status === 503) {
+                console.warn('Network error during verification check:', err);
+            } else {
+                console.error('Error checking verification status:', err);
+            }
+            
+            // Stop after 3 attempts
+            if (verificationAttempts >= 3) {
+                clearInterval(verificationCheckInterval);
+            }
+        } finally {
+            isCheckingVerification = false;
+        }
+    }
+
     async function signup() {
         // First validate password requirements
         const passwordError = validatePassword(password);
@@ -60,23 +109,58 @@
             };
             
             // Create the user account
-            await pb.collection('users').create(data);
+            const newUser = await pb.collection('users').create(data);
+            userId = newUser.id;
             
             // Send verification email
             await pb.collection('users').requestVerification(email);
             
             isVerificationSent = true;
             error = '';
+
+            // Check immediately first
+            await checkVerificationStatus();
+            
+            // Then start periodic checks
+            verificationCheckInterval = setInterval(checkVerificationStatus, 30000);
         } catch (err) {
             error = err.message;
         }
     }
 
+    // Clean up interval when component is destroyed
+    onDestroy(() => {
+        if (verificationCheckInterval) {
+            clearInterval(verificationCheckInterval);
+        }
+    });
+
     async function resendVerification() {
         try {
             isResendingEmail = true;
+            
+            // First get the user ID if we don't have it
+            if (!userId) {
+                const user = await pb.collection('users').getFirstListItem(`email = "${email}"`);
+                userId = user.id;
+            }
+            
             await pb.collection('users').requestVerification(email);
             error = '';
+
+            // Clear existing interval if any
+            if (verificationCheckInterval) {
+                clearInterval(verificationCheckInterval);
+            }
+
+            // Reset verification attempts
+            verificationAttempts = 0;
+            
+            // Check immediately first
+            await checkVerificationStatus();
+            
+            // Then start periodic checks
+            verificationCheckInterval = setInterval(checkVerificationStatus, 30000);
         } catch (err) {
             error = err.message;
         } finally {
@@ -110,11 +194,20 @@
                     </button>
                 </div>
 
-                <div class="login-link">
-                    Already verified? <a href="/basic-details">Add more info</a>
+                <div class="verification-status">
+                    {#if isCheckingVerification}
+                        <div class="checking">
+                            <div class="mini-spinner"></div>
+                            <span>Checking verification status... (Attempt {verificationAttempts}/3)</span>
+                        </div>
+                    {:else if verificationAttempts >= 3}
+                        <div class="checking-complete">
+                            <span>Verification not detected. Please check your email and click the verification link.</span>
+                        </div>
+                    {/if}
                 </div>
                 <div class="login-link">
-                    Already verified? <a href="/login">Login</a>
+                    <a href="/login">Already verified? Sign in</a>
                 </div>
             </div>
         {:else}
@@ -487,6 +580,35 @@
     .password-confirmation.invalid {
         color: #dc3545;
         background: rgba(220, 53, 69, 0.1);
+    }
+
+    .verification-status {
+        margin: 1rem 0;
+    }
+
+    .checking, .checking-complete {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        color: #64267C;
+        font-size: 0.9rem;
+        text-align: center;
+    }
+
+    .checking-complete {
+        padding: 0.5rem;
+        background: rgba(100, 38, 124, 0.05);
+        border-radius: 0.5rem;
+    }
+
+    .mini-spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid #64267C;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
     }
 
     @media (max-width: 640px) {
